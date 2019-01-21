@@ -1,0 +1,156 @@
+#!/usr/bin/php
+<?php
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+$begin_time = microtime(true);
+
+/**
+ * sdkappid 是app的sdkappid
+ * identifier 是用户帐号
+ * private_pem_path 为私钥在本地位置
+ * server_name 是服务类型
+ * command 是具体命令
+ */
+if ($GLOBALS['argc'] < 3) {
+    printf("默认从配置文件TimRestApiConfig.json读取配置信息，其中:\nidentifier 为APP管理员账户\n");
+    printf('private_pem_path 为独立模式下私钥本地路径,托管模式请填""');
+    printf("\n");
+    printf('user_sig 为托管模式用户下载到的用户凭证，独立模式请填""');
+    printf("\nusage:\n");
+    printf("  php imsdk (server_name) (command) args...\neg:\n");
+    printf("  php imsdk openim sendmsg (account_id) (receiver) (text_content)\n   单发消息\n");
+    printf("  php imsdk openim sendmsg_pic (account_id) (receiver) (pic_path)\n   单发图片(图片不超过5M)\n");
+    printf("  php imsdk openim batchsendmsg (account_id1,account_id2,...) (text_content)\n   批量发消息(接收者id组以逗号分隔)\n\n");
+    printf("  php imsdk openim batchsendmsg_pic (account_id1,account_id2,...) (pic_path)\n   批量发图片(接收者id组以逗号分隔,图片不超过5M)\n\n");
+    printf("  php imsdk im_open_login_svc account_import (identifier) (nick) (face_url)\n   独立模式同步帐号\n");
+    printf("  php imsdk registration_service register_account (identifier) (identifierType) (password)\n   托管模式存量帐号导入\n");
+    printf("  php imsdk profile portrait_get (account_id)\n   获取用户资料\n");
+    printf("  php imsdk profile portrait_set (account_id) (new_name)\n   修改用户名称\n\n");
+    printf("  php imsdk sns friend_import (account_id) (receiver)\n   建立好友关系\n");
+    printf("  php imsdk sns friend_delete (account_id) (frd_id)\n   双向解除好友关系\n");
+    printf("  php imsdk sns friend_delete_all (account_id)\n   解除用户所有好友关系\n");
+    printf("  php imsdk sns friend_check (account_id) (to_account)\n   验证好友关系(默认双向验证)\n");
+    printf("  php imsdk sns friend_get_all (account_id)\n   获取用户所有好友\n");
+    printf("  php imsdk sns friend_get_list (account_id) (frd_id)\n   获取用户指定好友\n\n");
+    printf("  php imsdk group_open_http_svc get_appid_group_list\n   获取APP中所有群组信息(默认获取50个)\n");
+    printf("  php imsdk group_open_http_svc create_group (group_type) (group_name) (owner_id)\n   创建群组(max_member_num默认为500)\n");
+    printf("  php imsdk group_open_http_svc change_group_owner (group_id) (new_owner)\n   转让群组\n");
+    printf("Public类型群组验证方式默认为需要验证，Private类型默认为禁止申请，ChatRoom类型默认为自由加入)\n");
+    printf("  php imsdk group_open_http_svc get_group_info (group_id)\n   获取指定群组信息\n");
+    printf("  php imsdk group_open_http_svc get_group_member_info (group_id) (limit) (offset)\n   获取群组成员信息\n");
+    printf("  php imsdk group_open_http_svc modify_group_base_info (group_id) (group_name)\n   修改群组名称\n");
+    printf("  php imsdk group_open_http_svc add_group_member (group_id) (member_id) (silence)\n   添加群组成员\n");
+    printf("  php imsdk group_open_http_svc delete_group_member (group_id) (member_id) (silence)\n   删除群组成员\n");
+    printf("  php imsdk group_open_http_svc modify_group_member_info (group_id) (account_id) (role)\n   修改群组某成员身份\n");
+    printf("  php imsdk group_open_http_svc destroy_group (group_id)\n   解散群组\n");
+    printf("  php imsdk group_open_http_svc get_joined_group_list (account_id)\n   获取用户所加入的所有群组\n");
+    printf("  php imsdk group_open_http_svc get_role_in_group (group_id) (member_id)\n   获取用户在群组中身份\n");
+    printf("  php imsdk group_open_http_svc forbid_send_msg (group_id) (member_id) (second)\n   在群组中禁言用户\n");
+    printf("  php imsdk group_open_http_svc send_group_msg (account_id) (group_id) (text_content)\n   群组中发送普通消息\n");
+    printf("  php imsdk group_open_http_svc send_group_msg_pic (account_id) (group_id) (pic_path)\n   群组中发送图片(图片不超过5M)\n");
+    printf("  php imsdk group_open_http_svc send_group_system_notification (group_id) (text_content) (receive_id)\n   群组中发送系统消息\n");
+    printf("  php imsdk group_open_http_svc import_group_member (group_id) (member_id) (role)\n   导入群组成员(Role不填为Member,唯一可填值为Admin)\n");
+    printf("  php imsdk group_open_http_svc import_group_msg (group_id) (from_account) (text)\n   导入群消息\n");
+    printf("  php imsdk group_open_http_svc set_unread_msg_num (group_id) (member_account) (unread_msg_num)\n   设置成员未读计数\n");
+    return;
+}
+list($server_name, $command) = array($argv[1], $argv[2]);
+
+#读取app配置文件
+$app_config       = require_once __DIR__ . '/config/config.php';
+$sdkappid         = $app_config["sdkappid"];
+$identifier       = $app_config["identifier"];
+$private_pem_path = $app_config["private_pem_path"];
+$user_sig         = $app_config["user_sig"];
+
+$api = new \Wxm\QcloudImsdk\TimRestAPI();
+$api->init($sdkappid, $identifier);
+
+if ($private_pem_path != '') {
+    //独立模式
+    if (!file_exists($private_pem_path)) {
+        echo "私钥文件不存在, 请确保TimRestApiConfig.json配置字段private_pem_path正确\n";
+        return;
+    }
+    try {
+        $TLSSig = new \Wxm\QcloudImsdk\TLSSig();
+        $TLSSig->setAppid($sdkappid);
+        $TLSSig->setPrivateKey(file_get_contents($private_pem_path));
+        $sig = $TLSSig->genSig($identifier);
+        $api->set_user_sig($sig);
+    } catch (\Exception $exception) {
+        echo $exception->getMessage();
+        return -1;
+    }
+} else if ($user_sig != "") {
+    //托管模式
+    $ret = $api->set_user_sig($user_sig);
+    if ($ret == false) {
+        echo "设置usrsig失败, 请确保TimRestApiConfig.json配置信息正确\n";
+        return -1;
+    }
+} else {
+    echo "请填写TimRestApiConfig.json中private_pem_path(独立模式)或者user_sig(托管模式)字段\n";
+    return -1;
+}
+
+#构造命令字典
+$command_dic = array(
+    "openim.sendmsg"                                     => 'send_msg',
+    "openim.sendmsg_pic"                                 => 'send_msg_pic',
+    "openim.batchsendmsg"                                => 'batch_sendmsg',
+    "openim.batchsendmsg_pic"                            => 'batch_sendmsg_pic',
+    "im_open_login_svc.account_import"                   => 'account_import',
+    "registration_service.register_account"              => 'register_account',
+    "profile.portrait_get"                               => 'portrait_get',
+    "profile.portrait_set"                               => 'portrait_set',
+    "sns.friend_import"                                  => 'friend_import',
+    "sns.friend_delete"                                  => 'friend_delete',
+    "sns.friend_delete_all"                              => 'friend_delete_all',
+    "sns.friend_check"                                   => 'friend_check',
+    "sns.friend_get_all"                                 => 'friend_get_all',
+    "sns.friend_get_list"                                => 'friend_get_list',
+    "group_open_http_svc.get_appid_group_list"           => 'get_appid_group_list',
+    "group_open_http_svc.create_group"                   => 'create_group',
+    "group_open_http_svc.change_group_owner"             => 'change_group_owner',
+    "group_open_http_svc.get_group_info"                 => 'get_group_info',
+    "group_open_http_svc.get_group_member_info"          => 'get_group_member_info',
+    "group_open_http_svc.modify_group_base_info"         => 'modify_group_base_info',
+    "group_open_http_svc.add_group_member"               => 'add_group_member',
+    "group_open_http_svc.delete_group_member"            => 'delete_group_member',
+    "group_open_http_svc.modify_group_member_info"       => 'modify_group_member_info',
+    "group_open_http_svc.destroy_group"                  => 'destroy_group',
+    "group_open_http_svc.get_joined_group_list"          => 'get_joined_group_list',
+    "group_open_http_svc.get_role_in_group"              => 'get_role_in_group',
+    "group_open_http_svc.forbid_send_msg"                => 'forbid_send_msg',
+    "group_open_http_svc.send_group_msg"                 => 'send_group_msg',
+    "group_open_http_svc.send_group_msg_pic"             => 'send_group_msg_pic',
+    "group_open_http_svc.send_group_system_notification" => 'send_group_system_notification',
+    "group_open_http_svc.import_group_member"            => 'import_group_member',
+    "group_open_http_svc.import_group_msg"               => 'import_group_msg',
+    "group_open_http_svc.set_unread_msg_num"             => 'set_unread_msg_num'
+);
+
+#分发命令
+$command_key   = $server_name . '.' . $command;
+$command_value = $command_dic[$command_key];
+$data_list     = array();
+for ($i = 3; $i < $argc; $i++) {
+    array_push($data_list, $argv[$i]);
+}
+
+//访问接口
+$ret = (new \Wxm\QcloudImsdk\TimRestApiGear())->$command_value($api, $data_list);
+if (gettype($ret) == "string") {
+    if (strstr($ret, "not enough")) {
+        return -1;
+    }
+}
+//结果格式化为json，并打印
+echo "Response Body:\n";
+echo $api->json_format($ret);
+echo "\n";
+$end_time = microtime(true);
+echo "Cost Time: " . (round($end_time - $begin_time, 3) * 1000) . "毫秒\n";
+

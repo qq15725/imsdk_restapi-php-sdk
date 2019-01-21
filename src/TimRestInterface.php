@@ -1,16 +1,6 @@
 <?php
-/**
- * 工厂函数
- *
- * @param int  $sdkappid   应用的appid
- * @param inti $accountype 应用账号类型
- *
- * @return RestAPI
- */
-function createRestAPI()
-{
-    return new TimRestAPI;
-}
+
+namespace Wxm\QcloudImsdk;
 
 abstract class TimRestInterface
 {
@@ -813,5 +803,3 @@ abstract class TimRestInterface
      */
     abstract function comm_rest($server_name, $command, $req_body);
 }
-
-?>

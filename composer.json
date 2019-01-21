@@ -1,0 +1,21 @@
+{
+    "name": "wxm/qcloud-imsdk",
+    "description": "forked from tencentyun/imsdk_restapi-php-sdk",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "你手捧鲜花",
+            "email": "157215725@qq.com"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "Wxm\\QcloudImsdk\\": "src/"
+        }
+    },
+    "bin": [
+        "bin/imsdk.php"
+    ]
+}
