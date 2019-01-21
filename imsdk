@@ -13,7 +13,7 @@ $begin_time = microtime(true);
  * command 是具体命令
  */
 if ($GLOBALS['argc'] < 3) {
-    printf("默认从配置文件TimRestApiConfig.json读取配置信息，其中:\nidentifier 为APP管理员账户\n");
+    printf("默认从配置文件 config/config.php 读取配置信息，其中:\nidentifier 为APP管理员账户\n");
     printf('private_pem_path 为独立模式下私钥本地路径,托管模式请填""');
     printf("\n");
     printf('user_sig 为托管模式用户下载到的用户凭证，独立模式请填""');
